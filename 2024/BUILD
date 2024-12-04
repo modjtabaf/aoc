@@ -31,3 +31,14 @@ cc_binary(
         "-Werror",
         ],
 )
+
+cc_binary(
+    name = 'day04',
+    srcs = ['day04.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        ],
+)

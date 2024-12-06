@@ -2,16 +2,11 @@
 #include <iostream>
 #include <vector>
 
-using Report = std::vector<int>;
+using Report  = std::vector<int>;
 using Reports = std::vector<Report>;
 
 Reports sample_reports{
-    {7, 6, 4, 2, 1},
-    {1, 2, 7, 8, 9},
-    {9, 7, 6, 2, 1},
-    {1, 3, 2, 4, 5},
-    {8, 6, 4, 4, 1},
-    {1, 3, 6, 7, 9},
+    {7, 6, 4, 2, 1}, {1, 2, 7, 8, 9}, {9, 7, 6, 2, 1}, {1, 3, 2, 4, 5}, {8, 6, 4, 4, 1}, {1, 3, 6, 7, 9},
 };
 
 Reports reports{
@@ -1017,19 +1012,18 @@ Reports reports{
     {59, 58, 55, 53, 52},
 };
 
-bool is_report_safe(const Report& report, int ignore_index=-1)
+bool is_report_safe(const Report& report, int ignore_index = -1)
 {
-    int report_0 = ignore_index == 0 ? report[1] : report[0];
-    int report_1 = ignore_index == 0 || ignore_index == 1 ? report[2] : report[1];
+    int report_0  = ignore_index == 0 ? report[1] : report[0];
+    int report_1  = ignore_index == 0 || ignore_index == 1 ? report[2] : report[1];
     int min_level = report_1 > report_0 ? 1 : -3;
     int max_level = report_1 > report_0 ? 3 : -1;
     int prev_level;
     bool first = true;
-    int index = 0;
-    for (auto level: report)
+    int index  = 0;
+    for (auto level : report)
     {
-        if (index++ == ignore_index)
-            continue;
+        if (index++ == ignore_index) continue;
 
         if (!first)
         {
@@ -1054,7 +1048,7 @@ int count_safe_reports(const Reports& reports)
 {
     int count = 0;
 
-    for (const auto& report: reports)
+    for (const auto& report : reports)
     {
         if (is_report_safe(report)) count++;
     }
@@ -1066,7 +1060,7 @@ int count_safe_reports_with_dampener(const Reports& reports)
 {
     int count = 0;
 
-    for (const auto& report: reports)
+    for (const auto& report : reports)
     {
         if (is_report_safe(report))
         {
@@ -1075,7 +1069,7 @@ int count_safe_reports_with_dampener(const Reports& reports)
         else
         {
             int n = report.size();
-            for (int ignore_index=0; ignore_index < n; ignore_index++)
+            for (int ignore_index = 0; ignore_index < n; ignore_index++)
             {
                 if (is_report_safe(report, ignore_index))
                 {

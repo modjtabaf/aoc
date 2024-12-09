@@ -73,3 +73,14 @@ cc_binary(
 >>>>>>> 5be48d1 (day 7)
         ],
 )
+
+cc_binary(
+    name = 'day08',
+    srcs = ['day08.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        ],
+)

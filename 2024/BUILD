@@ -55,22 +55,14 @@ cc_binary(
 )
 
 cc_binary(
-<<<<<<< HEAD
     name = 'day06',
     srcs = ['day06.cpp'],
-=======
-    name = 'day07',
-    srcs = ['day07.cpp'],
->>>>>>> 5be48d1 (day 7)
     copts = [
         "-pedantic-errors",
         "-Wall",
         "-Wextra",
         "-Werror",
-<<<<<<< HEAD
         "-std=c++17",
-=======
->>>>>>> 5be48d1 (day 7)
         ],
 )
 
@@ -82,6 +74,7 @@ cc_binary(
         "-Wall",
         "-Wextra",
         "-Werror",
+        "-std=c++17",
         ],
 )
 
@@ -89,9 +82,22 @@ cc_binary(
     name = 'day09',
     srcs = ['day09.cpp'],
     copts = [
-        # "-pedantic-errors",
-        # "-Wall",
-        # "-Wextra",
-        # "-Werror",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++17",
+        ],
+)
+
+cc_binary(
+    name = 'day11',
+    srcs = ['day11.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++17",
         ],
 )

@@ -80,9 +80,20 @@ cc_binary(
     name = 'day09',
     srcs = ['day09.cpp'],
     copts = [
-        # "-pedantic-errors",
-        # "-Wall",
-        # "-Wextra",
-        # "-Werror",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        ],
+)
+
+cc_binary(
+    name = 'day10',
+    srcs = ['day10.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
         ],
 )

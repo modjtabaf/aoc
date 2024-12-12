@@ -125,3 +125,15 @@ cc_binary(
         "-std=c++17",
         ],
 )
+
+cc_binary(
+    name = 'day12',
+    srcs = ['day12.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++17",
+        ],
+)

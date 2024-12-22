@@ -205,7 +205,7 @@ constexpr uint64_t unknown_score = invalid_score - 1;
 std::pair<uint64_t, int> try_move(const Map& map, AllScores& all_scores, int x, int y, int dir, int nx, int ny, int max_steps)
 {
     if (max_steps <= 0) return std::make_pair(invalid_score, 0);
-    if (x < 1 || x + 1 >= nx || y < 1 || y + 1 >= ny) return std::make_pair(invalid_score, 0);
+    if (x < 0 || x >= nx || y < 0 || y >= ny) return std::make_pair(invalid_score, 0);
 
     auto& score = all_scores[dir][y][x];
     if (score.first != unknown_score)
@@ -337,7 +337,7 @@ void find_spots(Spots& spots, const AllScores& all_scores, int x, int y, int dir
         auto [dx, dy] = dxdy[dir];
         int x2{x + dx};
         int y2{y + dy};
-        if (x2 >= 1 && x2 + 1 < nx && y2 >= 1 && y2 + 1 < ny)
+        if (x2 >= 0 && x2 < nx && y2 >= 0 && y2 < ny)
         {
             auto& score2 = all_scores[dir][y2][x2];
             if (score2.first != invalid_score && score2.first + score_diffs[k] == score)

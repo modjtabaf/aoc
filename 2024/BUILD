@@ -187,6 +187,18 @@ cc_binary(
 )
 
 cc_binary(
+    name = 'day17',
+    srcs = ['day17.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++20",
+        ],
+)
+
+cc_binary(
     name = 'day18',
     srcs = ['day18.cpp'],
     copts = [

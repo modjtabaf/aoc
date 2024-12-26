@@ -209,3 +209,15 @@ cc_binary(
         "-std=c++20",
         ],
 )
+
+cc_binary(
+    name = 'day25',
+    srcs = ['day25.cpp'],
+    copts = [
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++20",
+        ],
+)

@@ -1,5 +1,6 @@
 
-#include <cstdint>
+#include <algorithm>
+#include <cassert>
 #include <endian.h>
 #include <iostream>
 #include <limits>
@@ -37,7 +38,7 @@ Map sample_map{
     "###############",
 };
 
-Map map{
+Map problem_map{
     "#############################################################################################################################################",
     "###...#...#.......#.....#.....#.....#...###.......#...#...........#...............#...#.......#...#.....#.........#.....###.....###.....#...#",
     "###.#.#.#.#.#####.#.###.#.###.#.###.#.#.###.#####.#.#.#.#########.#.#############.#.#.#.#####.#.#.#.###.#.#######.#.###.###.###.###.###.#.#.#",
@@ -181,8 +182,7 @@ Map map{
     "#############################################################################################################################################",
 };
 
-using MapScores = std::vector<std::vector<std::pair<uint64_t, int>>>; // score, max_steps
-using AllScores = std::vector<MapScores>;
+using MapScores = std::vector<std::vector<int>>;
 
 void draw_map(const Map& map)
 {
@@ -191,139 +191,111 @@ void draw_map(const Map& map)
     std::cout << std::endl;
 }
 
-constexpr uint64_t invalid_score = std::numeric_limits<uint64_t>::max();
-constexpr uint64_t unknown_score = invalid_score - 1;
+constexpr int invalid_score = std::numeric_limits<int>::max();
+constexpr int unknown_score = invalid_score - 1;
+constexpr int locked_score  = invalid_score - 2;
+constexpr int highest_valid_score  = invalid_score - 10;
 
-std::pair<uint64_t, int> try_move(const Map& map, AllScores& all_scores, int x, int y, int dir, int nx, int ny, int max_steps, bool find_best, bool try_backwards=false)
+int try_move(MapScores& map_scores, int x, int y, int dir, int nx, int ny, bool find_best)
 {
-    if (max_steps <= 0) return std::make_pair(invalid_score, 0);
-    if (x < 0 || x >= nx || y < 0 || y >= ny) return std::make_pair(invalid_score, 0);
+    if (x < 0 || x >= nx || y < 0 || y >= ny) return invalid_score;
 
-    auto& score = all_scores[dir][y][x];
-    if (score.first != unknown_score)
-    {
-        if (score.first == invalid_score)
-        {
-            if (max_steps <= score.second) return std::make_pair(invalid_score, score.second);
-        }
-        else
-        {
-            if (!find_best) return score;
-            if (max_steps < score.second) return std::make_pair(invalid_score, max_steps);
-            if (max_steps == score.second) return score;
-        }
-    }
+    auto& score = map_scores[y][x];
+    if (score != unknown_score)
+        return score;
+    score = locked_score;
 
     auto [dx, dy] = dxdy[dir];
 
-    std::pair<uint64_t, int> min_score{score.first != unknown_score ? score.first : invalid_score, max_steps};
+    bool all_invalid{true};
+    int min_score{highest_valid_score};
 
-    auto score_new = try_move(map, all_scores, x + dx, y + dy, dir, nx, ny, max_steps - 1, find_best);
-    if (score_new.first != invalid_score)
+    auto score_new = try_move(map_scores, x + dx, y + dy, dir, nx, ny, find_best);
+    if (score_new < min_score - 1)
     {
-        min_score.first = score_new.first + 1;
-        min_score.second = score_new.second + 1;
+        min_score = score_new + 1;
         if (!find_best)
         {
             score = min_score;
             return min_score;
         }
     }
+    all_invalid = all_invalid && score_new == invalid_score;
 
     int dir1 = dir == 3 ? 0 : dir + 1;
-    score_new = try_move(map, all_scores, x - dy, y + dx, dir1, nx, ny, max_steps - 1, find_best);
-    if (score_new.first != invalid_score)
+    score_new = try_move(map_scores, x - dy, y + dx, dir1, nx, ny, find_best);
+    if (score_new < min_score - 1)
     {
-        score_new.first++;
-        if (score_new.first < min_score.first)
+        min_score = score_new + 1;
+        if (!find_best)
         {
-            min_score.first = score_new.first;
-            min_score.second = score_new.second + 1;
-            if (!find_best)
-            {
-                score = min_score;
-                return min_score;
-            }
+            score = min_score;
+            return min_score;
         }
     }
+    all_invalid = all_invalid && score_new == invalid_score;
 
     int dir2 = dir == 0 ? 3 : dir - 1;
-    score_new = try_move(map, all_scores, x + dy, y - dx, dir2, nx, ny, max_steps - 1, find_best);
-    if (score_new.first != invalid_score)
+    score_new = try_move(map_scores, x + dy, y - dx, dir2, nx, ny, find_best);
+    if (score_new < min_score - 1)
     {
-        score_new.first++;
-        if (score_new.first < min_score.first)
+        min_score = score_new + 1;
+        if (!find_best)
         {
-            min_score.first = score_new.first;
-            min_score.second = score_new.second + 1;
-            if (!find_best)
-            {
-                score = min_score;
-                return min_score;
-            }
+            score = min_score;
+            return min_score;
         }
     }
+    all_invalid = all_invalid && score_new == invalid_score;
 
-    if (try_backwards)
+    int dir3 = dir + 2;
+    if (dir3 > 3) dir3 -= 4;
+    score_new = try_move(map_scores, x - dx, y - dy, dir3, nx, ny, find_best);
+    if (score_new < min_score - 1)
     {
-        int dir3 = dir + 2;
-        if (dir3 > 3) dir3 -= 4;
-        score_new = try_move(map, all_scores, x - dx, y - dy, dir3, nx, ny, max_steps - 1, find_best);
-        if (score_new.first != invalid_score)
+        min_score = score_new + 1;
+        if (!find_best)
         {
-            score_new.first++;
-            if (score_new.first < min_score.first)
-            {
-                min_score.first = score_new.first;
-                min_score.second = score_new.second + 1;
-                if (!find_best)
-                {
-                    score = min_score;
-                    return min_score;
-                }
-            }
+            score = min_score;
+            return min_score;
         }
     }
+    all_invalid = all_invalid && score_new == invalid_score;
 
-    score = min_score;
+    if (all_invalid)
+    {
+        score = invalid_score;
+        return invalid_score;
+    }
+
+    score = min_score == highest_valid_score ? unknown_score : min_score;
     return min_score;
 }
 
-void init_all_scores(const Map& map, AllScores& all_scores)
+void init_map_scores(const Map& map, MapScores& map_scores)
 {
     int nx = map.front().size();
     int ny = map.size();
 
-    all_scores.clear();
-    all_scores.reserve(4);
-    for (int k = 0; k < 4; k++)
+    map_scores.clear();
+    map_scores.reserve(ny);
+    for (int y=0; y < ny; y++)
     {
-        auto& map_scores = all_scores.emplace_back();
-
-        map_scores.reserve(ny);
-        for (int y=0; y < ny; y++)
-        {
-            auto& row = map_scores.emplace_back();
-            row.reserve(nx);
-            for (int x=0; x < nx; x++)
-            {
-                map[y][x] == '#' ?
-                    row.emplace_back(std::make_pair(invalid_score, std::numeric_limits<int>::max())) :
-                    row.emplace_back(std::make_pair(unknown_score, std::numeric_limits<int>::max()));
-            }
-        }
+        auto& row = map_scores.emplace_back();
+        row.reserve(nx);
+        for (int x=0; x < nx; x++)
+            row.emplace_back(map[y][x] == '#' ? invalid_score : unknown_score);
     }
 }
 
-uint64_t part1(Map& map, bool find_best, int n_save)
+int solve(Map& map, bool find_best, int n_save, int dxy_min, int dxy_max)
 {
     int nx = map.front().size();
     int ny = map.size();
 
     int max_steps = 2;
     for (const auto& row: map)
-        for (auto c: row)
-            if (c == '.') max_steps++;
+        max_steps += std::count(row.begin(), row.end(), '.');
 
     // find the start and end positions
     int x_start, y_start;
@@ -347,65 +319,81 @@ uint64_t part1(Map& map, bool find_best, int n_save)
     // std::cout << "Initial\n";
     // draw_map(map);
 
-    AllScores all_scores;
-    init_all_scores(map, all_scores);
+    MapScores forward_map_scores;
+    init_map_scores(map, forward_map_scores);
+    forward_map_scores[y_end][x_end] = 0;
 
-    for (auto& scores: all_scores)
-    {
-        scores[y_end][x_end].first = 0;
-        scores[y_end][x_end].second = 0;
-    }
+    MapScores reverse_map_scores;
+    init_map_scores(map, reverse_map_scores);
+    reverse_map_scores[y_start][x_start] = 0;
 
-    auto score_orig = try_move(map, all_scores, x_start, y_start, 0, nx, ny, max_steps, find_best, true).first;
-    std::cout << score_orig << "\n";
+    auto best_forward_score = try_move(forward_map_scores, x_start, y_start, 0, nx, ny, find_best);
+    auto best_reverse_score = try_move(reverse_map_scores, x_end, y_end, 0, nx, ny, find_best);
+    assert(best_forward_score == best_reverse_score);
+
+    for (int y = 0; y < ny; y++)
+        for (int x = 0; x < nx; x++)
+        {
+            if (map[y][x] != '#')
+            {
+                try_move(forward_map_scores, x, y, 0, nx, ny, find_best);
+                try_move(reverse_map_scores, x, y, 0, nx, ny, find_best);
+            }
+        }
 
     int n_cheats{0};
 
-    int y{-1};
-    for (auto& row: map)
+    struct S
     {
-        y++;
-
-        int x{-1};
-        for (auto& c: row)
+        int score;
+        int x, y;
+    };
+    std::vector<S> sorted_forward_scores, sorted_reverse_scores;
+    sorted_forward_scores.reserve(max_steps);
+    sorted_reverse_scores.reserve(max_steps);
+    for (int y = 0; y < ny; y++)
+        for (int x = 0; x < nx; x++)
         {
-            x++;
+            if (map[y][x] == '#') continue;
+            sorted_forward_scores.emplace_back(forward_map_scores[y][x], x, y);
+            sorted_reverse_scores.emplace_back(reverse_map_scores[y][x], x, y);
+        }
+    std::sort(sorted_forward_scores.begin(), sorted_forward_scores.end(),
+        [](const S& s1, const S& s2) -> bool
+        {
+            return s1.score < s2.score;
+        });
+    std::sort(sorted_reverse_scores.begin(), sorted_reverse_scores.end(),
+        [](const S& s1, const S& s2) -> bool
+        {
+            return s1.score < s2.score;
+        });
 
-            if (c != '#') continue;
+    int max_target_score = best_forward_score - n_save;
+    for (const auto& reverse_score: sorted_reverse_scores)
+    {
+        if (reverse_score.score >= max_target_score) break;
+        for (const auto& forward_score: sorted_forward_scores)
+        {
+            if (forward_score.score >= max_target_score) break;
 
-            if ((x - 1 >= 0 && row[x - 1] != '#' && x + 1 < nx && row[x + 1] != '#') ||
-                (y - 1 >= 0 && map[y - 1][x] != '#' && y + 1 < ny && map[y + 1][x] != '#'))
-            {
-                auto c_old = c;
-                c = '.';
+            int dx = forward_score.x > reverse_score.x ? forward_score.x - reverse_score.x : reverse_score.x - forward_score.x;
+            int dy = forward_score.y > reverse_score.y ? forward_score.y - reverse_score.y : reverse_score.y - forward_score.y;
+            int dxy = dx + dy;
 
-                init_all_scores(map, all_scores);
+            if (dxy < dxy_min || dxy > dxy_max) continue;
 
-                for (auto& scores: all_scores)
-                {
-                    scores[y_end][x_end].first = 0;
-                    scores[y_end][x_end].second = 0;
-                }
-
-                auto ret = try_move(map, all_scores, x_start, y_start, 0, nx, ny, max_steps, find_best, true);
-                if (ret.first != invalid_score && ret.first + n_save <= score_orig)
-                {
-                    // draw_map(map);
-                    std::cout << "found at " << x << ", " << y << " = " << ret.first << "\n";
-                    n_cheats++;
-                }
-
-                c = c_old;
-            }
+            auto score = forward_score.score + reverse_score.score + dxy;
+            if (score <= max_target_score) n_cheats++;
         }
     }
 
     return n_cheats;
 }
 
-void find_spots(Spots& spots, const AllScores& all_scores, int x, int y, int dir, int nx, int ny, bool just_one)
+void find_spots(Spots& spots, const MapScores& map_scores, int x, int y, int dir, int nx, int ny, bool just_one)
 {
-    auto score = all_scores[dir][y][x].first;
+    auto score = map_scores[y][x];
 
     spots.emplace(x + y * nx);
 
@@ -416,10 +404,10 @@ void find_spots(Spots& spots, const AllScores& all_scores, int x, int y, int dir
         int y2{y + dy};
         if (x2 >= 0 && x2 < nx && y2 >= 0 && y2 < ny)
         {
-            auto& score2 = all_scores[dir][y2][x2];
-            if (score2.first != invalid_score && score2.first + 1 == score)
+            auto& score2 = map_scores[y2][x2];
+            if (score2 != invalid_score && score2 + 1 == score)
             {
-                find_spots(spots, all_scores, x2, y2, dir, nx, ny, just_one);
+                find_spots(spots, map_scores, x2, y2, dir, nx, ny, just_one);
                 if (just_one) break;
             }
         }
@@ -430,8 +418,9 @@ void find_spots(Spots& spots, const AllScores& all_scores, int x, int y, int dir
 
 int main()
 {
-    std::cout << part1(sample_map, true, 12) << std::endl;
-    std::cout << part1(map, true, 100) << std::endl;
+    std::cout << solve(sample_map, true, 12, 2, 2) << std::endl;
+    std::cout << solve(problem_map, true, 100, 2, 2) << std::endl;
+    std::cout << solve(problem_map, true, 100, 0, 20) << std::endl;
 
     return 0;
 }

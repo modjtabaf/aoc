@@ -1,7 +1,10 @@
 
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <vector>
+
+#define assertm(exp, msg) assert((void(msg), exp))
 
 struct Program
 {
@@ -21,10 +24,9 @@ struct Program
         return op;
     }
 
-    int run(bool part1)
+    void run(std::vector<uint8_t>& output)
     {
-        int n_match = 0;
-        auto ref = program.begin();
+        output.clear();
         for (auto p=program.begin(); p != program.end();)
         {
             auto inst = *(p++);
@@ -48,10 +50,7 @@ struct Program
                 B = B ^ C;
                 break;
             case 5: // out
-                if (part1)
-                    std::cout << (get_combo_operand(op) & 0b111) << ",";
-                else if ((get_combo_operand(op) & 0b111) != *(ref++)) return n_match;
-                n_match++;
+                output.emplace_back(get_combo_operand(op) & 0b111);
                 break;
             case 6: // bdv
                 B = A >> get_combo_operand(op);
@@ -60,13 +59,9 @@ struct Program
                 C = A >> get_combo_operand(op);
                 break;
             default:
-                std::cout << "invalid instruction!" << std::endl;
-                return false;
+                assertm(false, "invalid instruction!");
             }
         }
-
-        if (part1) std::cout << std::endl;
-        return n_match;
     }
 
 };
@@ -79,30 +74,66 @@ Program sample_program{
 };
 
 Program sample_program2{
-    2024,
+    0,
     0,
     0,
     {0,3,5,4,3,0}
 };
 
-Program program{
+Program problem_program{
     23999685,
     0,
     0,
     {
-        2,4,
-        1,1,
-        7,5,
-        1,5,
-        0,3,
-        4,4,
-        5,5,
-        3,0}
+        2,4,   // B = A & 0b111
+        1,1,   // B = B ^ 1
+        7,5,   // C = A >> B
+        1,5,   // B = B ^ 0b101
+        0,3,   // A = A >> 3
+        4,4, // B = B ^ C
+        5,5, // output B & 0b111
+        3,0} // if (A != 0) go to beginning
 };
+
+uint64_t find_chunk(Program& program, uint64_t A, int n, std::vector<uint8_t>& output)
+{
+    int N = program.program.size();
+    if (n == N) return A;
+
+    for (int a=0; a < 8; a++)
+    {
+        program.A = (A << 3) + a;
+        program.run(output);
+        bool found{true};
+        for (int k=0; k <= n && found; k++)
+        {
+            found = output[k] == program.program[N - 1 - n + k];
+        }
+
+        if (!found) continue;
+        
+        auto ret = find_chunk(program, (A << 3) + a, n + 1, output);
+        if (ret > 0) return ret;
+    }
+
+    return 0;
+}
 
 int main()
 {
-    sample_program.run(true);
-    program.run(true);
+    std::vector<uint8_t> output;
+    int N = problem_program.program.size();
+    output.reserve(N);
+
+    sample_program.run(output);
+    for (auto n: output) std::cout << int(n) << ",";
+    std::cout << "\n";
+    problem_program.run(output);
+    for (auto n: output) std::cout << int(n) << ",";
+    std::cout << "\n";
+
+    std::cout << find_chunk(sample_program2, 0, 0, output) << "\n";
+    std::cout << find_chunk(problem_program, 0, 0, output) << "\n";
+
     return 0;
 }

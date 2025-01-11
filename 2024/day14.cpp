@@ -11,11 +11,97 @@ struct RobotState
     int64_t x,y;
     int64_t u,v;
     char c{'O'};
+
+    void update(int n_steps, int nx, int ny)
+    {
+        x = (x + u * n_steps) % nx;
+        if (x < 0) x += nx;
+        y = (y + v * n_steps) % ny;
+        if (y < 0) y += ny;
+    }
 };
 
-using RobotStates = std::vector<RobotState>;
+struct RobotStates
+{
+    std::vector<RobotState> states;
+    int cur_step{0};
 
-RobotStates sample_robot_states{
+    uint32_t part1(int n_steps, int nx, int ny)
+    {
+        uint32_t n0{0}, n1{0}, n2{0}, n3{0};
+        int64_t xm = nx >> 1;
+        int64_t ym = ny >> 1;
+        for (auto& robot_state: states)
+        {
+            robot_state.update(n_steps, nx, ny);
+            if (robot_state.x < xm && robot_state.y < ym) n0++;
+            else if (robot_state.x < xm && robot_state.y > ym) n1++;
+            else if (robot_state.x > xm && robot_state.y > ym) n2++;
+            else if (robot_state.x > xm && robot_state.y < ym) n3++;
+        }
+        cur_step += n_steps;
+        return n0 * n1 * n2 * n3;
+    }
+
+    void part2(int step2, int nx, int ny)
+    {
+        uint64_t min_err{std::numeric_limits<uint64_t>::max()};
+        for (int step=cur_step + 1; step < step2; step++)
+        {
+            part1(1, nx, ny);
+
+            int mx{0};
+            int my{0};
+            for (const auto& rs: states)
+            {
+                mx += rs.x;
+                my += rs.y;
+            }
+            mx /= states.size();
+            my /= states.size();
+
+            uint64_t err{0};
+            for (const auto& rs: states)
+                err += (rs.x - mx) * (rs.x - mx) + (rs.y - my) * (rs.y - my);
+
+            if (err < min_err)
+            {
+                min_err = err;
+                std::cout << "Minimum error = " << min_err << " at step " << step << "\n";
+
+                std::sort(states.begin(), states.end(),
+                    [](const RobotState& rs1, const RobotState& rs2) -> bool
+                    {
+                        return (rs1.y < rs2.y) || ((rs1.y == rs2.y) && (rs1.x < rs2.x));
+                    });
+                
+                auto rs = states.begin();
+                for (int y=0; y < ny; y++)
+                {
+                    for (int x=0; x < nx; x++)
+                    {
+                        if ((rs != states.end()) && (rs->x == x) && (rs->y == y))
+                        {
+                            std::cout << rs->c;
+                            do
+                            {
+                                rs++;
+                            } while(rs != states.end() && rs->x == x && rs->y == y);
+                        }
+                        else
+                        {
+                            std::cout << ' ';
+                        }
+                    }
+                    std::cout << "\n";
+                }
+                assert(rs == states.end());
+            }
+        }
+    }
+};
+
+RobotStates sample_robot_states{{
     {0,4,3,-3},
     {6,3,-1,-3},
     {10,3,-1,2},
@@ -28,9 +114,9 @@ RobotStates sample_robot_states{
     {7,3,-1,2},
     {2,4,2,-3},
     {9,5,-3,-3},
-};
+}};
 
-RobotStates robot_states{
+RobotStates robot_states{{
     {69,95,70,-27},
     {95,51,-76,-2},
     {54,32,-80,-4},
@@ -531,111 +617,12 @@ RobotStates robot_states{
     {27,86,65,-30},
     {25,46,16,48},
     {5,3,-76,-90},
-};
-
-void update_robot_state(RobotState& robot_state, int n_steps, int nx, int ny)
-{
-    robot_state.x = (robot_state.x + robot_state.u * n_steps) % nx;
-    if (robot_state.x < 0) robot_state.x += nx;
-    robot_state.y = (robot_state.y + robot_state.v * n_steps) % ny;
-    if (robot_state.y < 0) robot_state.y += ny;
-}
-
-uint32_t part1(RobotStates& robot_states, int n_steps, int nx, int ny)
-{
-    uint32_t n0{0}, n1{0}, n2{0}, n3{0};
-    int64_t xm = nx >> 1;
-    int64_t ym = ny >> 1;
-    for (auto& robot_state: robot_states)
-    {
-        update_robot_state(robot_state, n_steps, nx, ny);
-        if (robot_state.x < xm && robot_state.y < ym) n0++;
-        else if (robot_state.x < xm && robot_state.y > ym) n1++;
-        else if (robot_state.x > xm && robot_state.y > ym) n2++;
-        else if (robot_state.x > xm && robot_state.y < ym) n3++;
-    }
-    // std::cout << n0 << ", " << n1 << ", " << n2 << ", " << n3 << std::endl;
-    return n0 * n1 * n2 * n3;
-}
-
-void part2(RobotStates& robot_states, int step1, int step2, int nx, int ny)
-{
-    const int mx = nx / 2;
-
-    part1(robot_states, step1 - 1, nx, ny);
-
-    std::vector<std::pair<uint64_t, int>> sums;
-    sums.reserve(ny);
-    for (int y=0; y < ny; y++) sums.emplace_back(0, 0);
-
-    uint64_t min_err{std::numeric_limits<uint64_t>::max()};
-    for (int step=step1; step < step2; step++)
-    {
-        for (auto& sum: sums)
-        {
-            sum.first = 0;
-            sum.second = 0;
-        }
-
-        part1(robot_states, 1, nx, ny);
-
-        for (const auto& rs: robot_states)
-        {
-            auto& sum = sums[rs.y];
-            sum.first += rs.x;
-            sum.second++;
-        }
-
-        uint64_t err{0};
-        for (auto& sum: sums)
-        {
-            int64_t avg = sum.second > 0 ? sum.first/sum.second : 0;
-            err += (avg - mx) * (avg - mx);
-        }
-
-        if (err < min_err)
-        {
-            min_err = err;
-            std::cout << "Minimum error = " << min_err << " at step " << step << std::endl;
-
-            std::sort(robot_states.begin(), robot_states.end(),
-                [](const RobotState& rs1, const RobotState& rs2) -> bool
-                {
-                    //
-                    return (rs1.y < rs2.y) || ((rs1.y == rs2.y) && (rs1.x < rs2.x));
-                });
-            
-            auto rs = robot_states.begin();
-            for (int y=0; y < ny; y++)
-            {
-                for (int x=0; x < nx; x++)
-                {
-                    //
-                    if ((rs != robot_states.end()) && (rs->x == x) && (rs->y == y))
-                    {
-                        std::cout << rs->c;
-                        do
-                        {
-                            update_robot_state(*rs, 1, nx, ny);
-                            rs++;
-                        } while(rs != robot_states.end() && rs->x == x && rs->y == y);
-                    }
-                    else
-                    {
-                        std::cout << ' ';
-                    }
-                }
-                std::cout << "\n";
-            }
-            assert(rs == robot_states.end());
-        }
-    }
-}
+}};
 
 int main()
 {
-    // std::cout << part1(sample_robot_states, 100, 11, 7) << std::endl;
-    // std::cout << part1(robot_states, 100, 101, 103) << std::endl;
-    part2(robot_states, 0, 10000, 101, 103);
+    std::cout << sample_robot_states.part1(100, 11, 7) << "\n";
+    std::cout << robot_states.part1(100, 101, 103) << "\n";
+    robot_states.part2(10000, 101, 103);
     return 0;
 }
